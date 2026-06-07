@@ -4774,11 +4774,19 @@ function _locLoadLeaflet(cb){
   document.head.appendChild(s);
 }
 
-function _locShowMap(lat,lng,hdbBlocks,street){
-  // Find or create map container in the last Harvey message
+function _locShowMap(lat,lng,hdbBlocks,street,_retry){
+  // Find last Harvey message — retry up to 5 times if not ready yet
   const msgs=document.querySelectorAll('.msg-ai');
-  if(!msgs.length) return;
+  if(!msgs.length){
+    if((_retry||0)<5) setTimeout(()=>_locShowMap(lat,lng,hdbBlocks,street,(_retry||0)+1),400);
+    return;
+  }
   const lastMsg=msgs[msgs.length-1];
+  // Sanity check — last msg should have some content
+  if(!lastMsg.textContent.trim()&&(_retry||0)<5){
+    setTimeout(()=>_locShowMap(lat,lng,hdbBlocks,street,(_retry||0)+1),400);
+    return;
+  }
 
   // Remove any existing map
   _locDestroyMap();
@@ -15849,7 +15857,7 @@ async function _locTap(){
         // Stamp chip context — user can respond with bare block numbers for 2min
         _locChipCtx={street:_primary.street,blocks:_showBlks,ts:Date.now()};
         // Show map after chips render
-        setTimeout(()=>_locShowMap(geo.lat,geo.lng,_showBlks,_primary.street),300);
+        setTimeout(()=>_locShowMap(geo.lat,geo.lng,_showBlks,_primary.street),900);
 
         let _locMsg='Location confirmed, sir.<br>';
         if(_allAddr.length) _locMsg+='Nearest address: <strong>'+_allAddr[0]+'</strong><br>';
@@ -15890,7 +15898,7 @@ async function _locTap(){
         harveyMsg(_noHdbMsg,_noHdbChips);
         speak('Location acquired, sir, but no HDB blocks found within '+_bufM+' metres. You may not be near an HDB precinct.');
         // Show map even with no HDB — user can still see where they are
-        setTimeout(()=>_locShowMap(geo.lat,geo.lng,[],null),300);
+        setTimeout(()=>_locShowMap(geo.lat,geo.lng,[],null),900);
       }
       mode='menu';loading=false;sbEl.disabled=false;
     },

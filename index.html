@@ -4791,6 +4791,9 @@ function _locShowMap(lat,lng,hdbBlocks,street,_retry){
   // Remove any existing map
   _locDestroyMap();
 
+  // Small guard — if somehow called twice, skip
+  if(document.getElementById('loc-map-wrapper')){return;}
+
   // Create toggle chip
   const chipId='loc-map-toggle-'+Date.now();
   const mapId='loc-map-'+Date.now();
@@ -4832,6 +4835,8 @@ function _locShowMap(lat,lng,hdbBlocks,street,_retry){
 
             // Centre on user location
             _locMap.setView([lat,lng],16);
+            // Force tile redraw — needed when container was previously hidden
+            setTimeout(()=>{if(_locMap)_locMap.invalidateSize();},100);
 
             // User pin — cyan dot
             const userIcon=L.divIcon({
@@ -6018,7 +6023,12 @@ async function _handleInputInner(raw){
     _locBuffer=_bufVoiceMatch?Number(_bufVoiceMatch[1]):(_bMap[raw]||_locBuffer);
     harveyMsg('Search radius set to <strong>'+_locBuffer+'m</strong>, sir. Relocating...',[{label:'⊗ ABORT',val:'__loc_abort__'}]);
     speak('Radius set to '+_locBuffer+' metres. Relocating.');
-    _locTap();loading=false;sbEl.disabled=false;return;
+    // Clean up map and reset state before re-running
+    _locDestroyMap();
+    _locState='idle';
+    // Let harveyMsg render before firing _locTap
+    setTimeout(()=>_locTap(),200);
+    loading=false;sbEl.disabled=false;return;
   }
   if(raw==='__loc_adjust__'){
     harveyMsg('Adjust search radius, sir — tap to change:',
@@ -15789,6 +15799,8 @@ function _locAbort(){
 async function _locTap(){
   if(_locState==='acquiring'){_locAbort();return;}
   if(!navigator.geolocation){harveyMsg('Geolocation is not supported on this browser, sir.');return;}
+  // Always destroy any existing map before starting fresh
+  _locDestroyMap();
   if(!ONEMAP_TOKEN){
     harveyMsg('Location service is currently unavailable, sir. The OneMap token has not been loaded — please try reloading the page, or the token may need refreshing.');
     return;

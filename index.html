@@ -4855,12 +4855,12 @@ function _locShowMap(lat,lng,hdbBlocks,street){
                   L.marker([bLat,bLng],{icon:blkIcon})
                     .addTo(_locMap)
                     .on('click',()=>{
-                      // Collapse map, trigger block detail
+                      // Collapse map, trigger block detail via chat input
                       mapDiv.style.display='none';
                       toggle.textContent='🗺 SHOW MAP';
                       if(_locMap){_locMap.remove();_locMap=null;}
-                      if(typeof sendPrompt==='function') sendPrompt('block '+blk+' '+street);
-                      else handleInput._raw='block '+blk+' '+street;
+                      ciEl.value='block '+blk+' '+street;
+                      handleInput();
                     });
                 }).catch(()=>{});
               });
@@ -15889,6 +15889,8 @@ async function _locTap(){
         ];
         harveyMsg(_noHdbMsg,_noHdbChips);
         speak('Location acquired, sir, but no HDB blocks found within '+_bufM+' metres. You may not be near an HDB precinct.');
+        // Show map even with no HDB — user can still see where they are
+        setTimeout(()=>_locShowMap(geo.lat,geo.lng,[],null),300);
       }
       mode='menu';loading=false;sbEl.disabled=false;
     },
